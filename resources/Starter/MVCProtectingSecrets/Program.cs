@@ -1,3 +1,4 @@
+using Azure.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using MVCProtectingSecrets.Data;
@@ -12,7 +13,19 @@ namespace MVCProtectingSecrets
             builder.Services.AddHttpClient();
 
             //TODO: Add the Azure App Configuration code here.
+            var appConfigConnection = builder.Configuration.GetConnectionString("AzureAppConfigConnection");
 
+            builder.Host.ConfigureAppConfiguration((hostingContext, config) =>
+            {
+                config.AddAzureAppConfiguration(options =>
+                {
+                    options.Connect(appConfigConnection);
+                    options.ConfigureKeyVault(options =>
+                    {
+                        options.SetCredential(new DefaultAzureCredential());
+                    });
+                });
+            });
 
             // Add services to the container.
             var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
@@ -21,11 +34,11 @@ namespace MVCProtectingSecrets
             builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
             //optional, turn on to auto-migrate on startup [Warning: prevents any possibility of migration rollback]
-            //var contextOptions = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlServer(connectionString).Options;
-            //using (var context = new ApplicationDbContext(contextOptions))
-            //{
-            //    context.Database.Migrate();
-            //}
+            var contextOptions = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlServer(connectionString).Options;
+            using (var context = new ApplicationDbContext(contextOptions))
+            {
+                context.Database.Migrate();
+            }
 
             builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
                 .AddEntityFrameworkStores<ApplicationDbContext>();

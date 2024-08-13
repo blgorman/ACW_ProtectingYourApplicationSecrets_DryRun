@@ -24,6 +24,11 @@ namespace MVCProtectingSecrets.Initializers
             // Sanitize email addresses
             msg = SanitizeEmail(msg);
 
+            msg = SanitizeConnectionStringDetails(msg);
+
+            // Sanitize SAS Tokens
+            msg = SanitizeSASToken(msg);
+
             //return sanitized string
             return msg;
         }
@@ -33,6 +38,33 @@ namespace MVCProtectingSecrets.Initializers
             var regexEmail = @"\w+([-+.]\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*";
             var replacedEmail = "[emailaddress]";
             return Regex.Replace(msg, regexEmail, replacedEmail);
+        }
+
+        private static string SanitizeConnectionStringDetails(string msg)
+        {
+            var regexSQLConnectionString = @"(?i)[a-z][a-z0-9-]+\.database(?:\.secure)?\.(?:(?:windows|usgovcloudapi)\.net|chinacloudapi\.cn|cloudapi\.de)";
+            var regexInitialCatalog = @"Initial Catalog=[a-zA-Z0-9-]*";
+            var regexUserID = @"User ID=[a-zA-Z0-9-_]*";
+            var regexPassword = @"Password=[a-zA-Z0-9-!@#$%^&*()_]*";
+
+            var cnstrReplaced = "[redacted-server]";
+            var catReplace = "Intiial Catalog=[redacted-db]";
+            var userIDReplace = "User ID=[redacted-user]";
+            var passwordReplace = "Password=[redacted-password]";
+
+            msg = Regex.Replace(msg, regexSQLConnectionString, cnstrReplaced);
+            msg = Regex.Replace(msg, regexInitialCatalog, catReplace);
+            msg = Regex.Replace(msg, regexUserID, userIDReplace);
+            msg = Regex.Replace(msg, regexPassword, passwordReplace);
+            return msg;
+        }
+
+        private static string SanitizeSASToken(string msg)
+        {
+            var regexSASToken = @"sig=[a-zA-Z0-9%]*";
+            var sasReplaced = "[sastoken]";
+            msg = Regex.Replace(msg, regexSASToken, sasReplaced);
+            return msg;
         }
     }
 }
